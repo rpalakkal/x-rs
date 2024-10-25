@@ -6,7 +6,8 @@ use super::Account;
 
 #[derive(Deserialize, Debug)]
 pub struct Application {
-    token: String,
+    pub token: String,
+    pub app_id: String,
 }
 
 #[derive(Deserialize, Debug)]

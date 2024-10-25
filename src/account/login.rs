@@ -296,6 +296,32 @@ impl Login {
         Ok(task_response)
     }
 
+    async fn confirm_email(&self, flow_token: &str) -> eyre::Result<TaskResponse> {
+        let payload = serde_json::json!({
+            "flow_token": flow_token,
+            "subtask_inputs": [
+                {
+                    "subtask_id": "LoginAcid",
+                    "enter_text": {
+                        "text": self.email,
+                        "link": "next_link"
+                    }
+                }
+            ]
+        });
+
+        let response = self
+            .client
+            .post(LOGIN_URL)
+            .headers(self.headers.clone())
+            .json(&payload)
+            .send()
+            .await?;
+
+        let task_response: TaskResponse = response.json().await?;
+        Ok(task_response)
+    }
+
     pub async fn login(&mut self) -> eyre::Result<AccountAuth> {
         self.get_guest_token().await?;
         let res = self.init_login().await?;
@@ -318,6 +344,10 @@ impl Login {
                 "LoginEnterAlternateIdentifierSubtask" => {
                     self.alternate_identifier(&res.flow_token, &self.email)
                         .await?
+                }
+                "LoginAcid" => {
+                    // todo: handle case where email code is required
+                    self.confirm_email(&res.flow_token).await?
                 }
                 _ => {
                     eyre::bail!("Login Failed: {:?}", res);

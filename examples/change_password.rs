@@ -14,10 +14,14 @@ async fn main() {
         .map(char::from)
         .collect();
 
-    let account = Account::from_file("auth.txt").unwrap();
+    let mut account = Account::from_file("auth.txt").unwrap();
     account
         .change_password(&old_password, &new_password)
         .await
         .unwrap();
     log::info!("Password changed to: {}", new_password);
+    account.refresh_cookies().await.unwrap();
+    // to test new cookies work
+    let phone_email_info = account.get_email_phone_info().await.unwrap();
+    log::info!("{:?}", phone_email_info);
 }

@@ -1,7 +1,11 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use reqwest::{header::HeaderMap, Client};
-use reqwest_cookie_store::CookieStore;
+use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use serde::{Deserialize, Serialize};
 
 pub mod login;
@@ -10,6 +14,9 @@ pub mod password;
 
 pub struct Account {
     client: Client,
+    cookie_store: Arc<CookieStoreMutex>,
+    headers: HeaderMap,
+    auth_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -52,15 +59,23 @@ impl Account {
         let cookie_store = Arc::new(reqwest_cookie_store::CookieStoreMutex::new(cookie_store));
         let client = Client::builder()
             .cookie_provider(cookie_store.clone())
-            .default_headers(header_map)
+            .default_headers(header_map.clone())
             .build()
             .unwrap();
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            cookie_store,
+            headers: header_map,
+            auth_path: None,
+        })
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> eyre::Result<Self> {
-        let auth: AccountAuth = serde_json::from_reader(std::fs::File::open(path)?)?;
-        Self::from_auth(auth)
+        let path = path.as_ref().to_path_buf();
+        let auth: AccountAuth = serde_json::from_reader(std::fs::File::open(path.clone())?)?;
+        let mut account = Self::from_auth(auth)?;
+        account.auth_path = Some(path);
+        Ok(account)
     }
 
     pub async fn get_email_phone_info(&self) -> eyre::Result<EmailPhoneResponse> {
