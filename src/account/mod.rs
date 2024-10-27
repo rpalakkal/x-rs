@@ -83,6 +83,20 @@ impl Account {
         let response: EmailPhoneResponse = self.client.get(url).send().await?.json().await?;
         Ok(response)
     }
+
+    pub fn auth_cookie_string(&self) -> String {
+        let cookie_store = self.cookie_store.lock().unwrap();
+        let mut auth_token = String::new();
+        let mut ct0 = String::new();
+        for cookie in cookie_store.iter_any() {
+            match cookie.name() {
+                "auth_token" => auth_token = cookie.value().to_string(),
+                "ct0" => ct0 = cookie.value().to_string(),
+                _ => continue,
+            }
+        }
+        format!("auth_token={}; ct0={}", auth_token, ct0)
+    }
 }
 
 #[derive(Debug, Deserialize)]
