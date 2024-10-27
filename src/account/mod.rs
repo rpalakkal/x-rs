@@ -86,16 +86,13 @@ impl Account {
 
     pub fn auth_cookie_string(&self) -> String {
         let cookie_store = self.cookie_store.lock().unwrap();
-        let mut auth_token = String::new();
-        let mut ct0 = String::new();
+        let mut auth_cookie = serde_json::Map::new();
         for cookie in cookie_store.iter_any() {
-            match cookie.name() {
-                "auth_token" => auth_token = cookie.value().to_string(),
-                "ct0" => ct0 = cookie.value().to_string(),
-                _ => continue,
+            if cookie.name() == "auth_token" || cookie.name() == "ct0" {
+                auth_cookie.insert(cookie.name().to_string(), cookie.value().to_string().into());
             }
         }
-        format!("auth_token={}; ct0={}", auth_token, ct0)
+        serde_json::to_string(&auth_cookie).unwrap()
     }
 }
 
